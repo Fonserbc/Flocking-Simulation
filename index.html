@@ -7,17 +7,41 @@
 		<!-- Place this tag in your head or just before your close body tag. -->
 		<script async defer src="https://buttons.github.io/buttons.js"></script>
 		<style>
+			html,body{
+				height: 100%;
+			}
 			body {
 				margin: 0px;
 				overflow: hidden;
-				cursor: pointer;
+				/*cursor: pointer;*/
+			}
+			canvas {
+				display: block; /* fix necessary to remove space at bottom of canvas */
+				top: 0;
+			}
+			#front {
+				background-image: url("img/SWRM.png");
+
+				/* Full height */
+				height: 100%; 
+				width: 100%;
+				position: absolute;
+				top: 0;
+				left: 0;
+
+				/* Center and scale the image nicely */
+				background-position: top;
+				background-repeat: no-repeat;
+				background-size: 100% 100%;
+				z-index: 100;
+				background-color: transparent;
 			}
 		</style>
 	</head>
 	<body>
-		<div style="position: relative;"><center><b>Use Scroll to Zoom In/Out | Click+drag to move in 3D</b></center></div>
+		<!--<div style="position: relative;"><center><b>Use Scroll to Zoom In/Out | Click+drag to move in 3D</b></center></div>
 		<div style="position: relative;"><center>
-		<!--<a class="github-button" href="https://github.com/techcentaur/Starling-Simulation" data-icon="octicon-star" aria-label="Star techcentaur/Starling-Simulation on GitHub">Star</a>
+		<a class="github-button" href="https://github.com/techcentaur/Starling-Simulation" data-icon="octicon-star" aria-label="Star techcentaur/Starling-Simulation on GitHub">Star</a>
 		<a class="github-button" href="https://github.com/techcentaur/Starling-Simulation/fork" data-icon="octicon-repo-forked" aria-label="Fork techcentaur/Starling-Simulation on GitHub">Fork</a>
 		<a class="github-button" href="https://github.com/techcentaur" aria-label="Follow @techcentaur on GitHub">Follow @techcentaur</a>
 		</center></div>
@@ -27,6 +51,7 @@
 		<div id="info" style="margin-top: -6%;">
 		 <span id="birds"></span>
 		 </div>
+		<div id = "front"></div>
 
 		<script src="js-libs/three.js"></script>
 		<script src="js-libs/Detector.js"></script>
@@ -245,7 +270,7 @@
 			var birds = argumentHash * argumentHash;
 
 			THREE.BirdGeometry = function () {
-				var sideCount = 8;
+				var sideCount = 3;
 				var triangles = birds * sideCount;
 				var points = triangles * 3;
 
@@ -269,29 +294,40 @@
 				}
 				var radius = 20;
 				var deltaAngle = (Math.PI * 2) / sideCount;
-				for (var f = 0; f < birds; ++f) {
-					for (var s = 0; s < sideCount; ++s) {
+				if (sideCount == 3) { // real birds
+					for (var f = 0; f<birds; f++ ) {
 						vertex_append(
-							0,0,0,
-							radius*Math.cos(deltaAngle*s),0, radius*Math.sin(deltaAngle*s),
-							radius*Math.cos(deltaAngle*(s+1)),0, radius*Math.sin(deltaAngle*(s+1)));
+							0, -0, -6,
+							0, 1, -15,
+							0, 0, 8);
+						vertex_append( // wing
+							0, 1, -10,
+							-6, 0, 0,
+							0, 0, 4);
+						vertex_append( // wing
+							0, 0, 4,
+							6, 0, 0,
+							0, 1, -10);
 					}
 				}
-
-				/*for (var f = 0; f<birds; f++ ) {
-					//vertex_append(
-					//	0, -0, -6,
-					//	0, 1, -15,
-					//	0, 0, 8);
-					//vertex_append(
-					//	0, 0, -4,
-					//	-6, 0, 0,
-					//	0, 0, 4);
-					//vertex_append(
-					//	0, 0, 4,
-					//	6, 0, 0,
-					//	0, 0, -4);
-				}*/
+				if (sideCount > 1) {
+					for (var f = 0; f < birds; ++f) {
+						for (var s = 0; s < sideCount; ++s) {
+							vertex_append(
+								0,0,0,
+								radius*Math.cos(deltaAngle*s),0, radius*Math.sin(deltaAngle*s),
+								radius*Math.cos(deltaAngle*(s+1)),0, radius*Math.sin(deltaAngle*(s+1)));
+						}
+					}
+				}
+				else { // Triangle simple
+					for (var f = 0; f < birds; ++f) {
+						vertex_append(
+							radius*Math.cos(0),radius*Math.cos(0),0,
+							radius*Math.cos(deltaAngle*1),radius*Math.sin(deltaAngle*1), 0,
+							radius*Math.cos(deltaAngle*2),radius*Math.sin(deltaAngle*2), 0);
+					}
+				}
 
 				for( var v = 0; v < triangles * 3; v++ ) {
 					var i = ~~(v / 3);
@@ -312,6 +348,8 @@
 
 			THREE.BirdGeometry.prototype = Object.create( THREE.BufferGeometry.prototype );
 
+			var width = window.innerWidth;
+			var height = window.innerHeight;
 			var half_resolution_windowX = window.innerWidth / 2;
 			var half_resolution_windowY = window.innerHeight / 2;
 
@@ -336,33 +374,44 @@
 			var container, stats;
 			var camera, scene, renderer, geometry, i, h, color;
 			var mouseX = 0, mouseY = 0;
+			var fov = 45;
+			var cameraDistance = 850;
+			var cameraHeight = 600;
+			var camRot = 0;
+			var rotationSpeed = 0.2;
 
 			init();
 			animate();
+
+			function positionCam(cam, rot) {
+				cam.position.x = Math.sin(rot) * cameraDistance;
+				cam.position.z = Math.cos(rot) * cameraDistance;
+				cam.position.y = Math.cos(rot / 4) * cameraHeight;
+			    camera.lookAt(scene.position);
+			}
 
 			function init() {
 				container = document.createElement( 'div' );
 				document.body.appendChild( container );
 
-				camera = new THREE.PerspectiveCamera( 75, window.innerWidth / window.innerHeight, 1, 3000 );
+				camera = new THREE.PerspectiveCamera( fov, window.innerWidth / window.innerHeight, 1, 3000 );
 
 				scene = new THREE.Scene();
-				scene.background = new THREE.Color( 0xefefe0);
-				scene.fog = new THREE.Fog( 0x87ceeb, 100, 1000 );
+				scene.background = new THREE.Color( 0xf5f0da);
+				scene.fog = new THREE.Fog( 0xf5f0da, 100, 1000 );
 
 			    renderer = new THREE.WebGLRenderer({antialias:true});
 		        renderer.setClearColor(0x66C2FF);
-		        renderer.setSize(window.innerWidth, window.innerHeight);
+				var win = document.getElementById("front");
+
+		        renderer.setSize(screen.width, screen.height);
 		        renderer.shadowMapEnabled= true;
 		        renderer.shadowMapSoft = true;
 				
-				controls = new THREE.OrbitControls( camera, renderer.domElement );
-			    controls.addEventListener( 'change', render );
+				//controls = new THREE.OrbitControls( camera, renderer.domElement );
+			    //controls.addEventListener( 'change', render );
 			                
-			    camera.position.x = 600;
-			    camera.position.y = 600;
-			    camera.position.z = 600; 
-			    camera.lookAt(scene.position);
+				positionCam(camera, camRot);
 
 		        guiControls = new function(){
 		            this.rotationX  = 0.0;
@@ -403,8 +452,8 @@
 				container.appendChild( renderer.domElement );
 				initComputeRenderer();
 
-				stats = new Stats();
-				container.appendChild( stats.dom );
+				//stats = new Stats();
+				//container.appendChild( stats.dom );
 
 				document.addEventListener( 'mousemove', onDocumentMouseMove, false );
 				document.addEventListener( 'touchstart', onDocumentTouchStart, false );
@@ -557,16 +606,22 @@
 
 			function animate() {
 				requestAnimationFrame( animate );
-				render();
-				stats.update();
-			}
-
-			function render() {
 				var now = performance.now();
 				var del_change = (now - last) / 1000;
 
 				if (del_change > 1) del_change = 1; // safety cap on large del_changes
 				last = now;
+				
+
+				camRot += del_change * rotationSpeed;
+
+				positionCam(camera, camRot);
+
+				render(now, del_change);
+				if (stats) stats.update();
+			}
+
+			function render( now, del_change ) {
 
 				uniform_position.clock.value = now;
 				uniform_position.del_change.value = del_change;
