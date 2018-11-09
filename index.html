@@ -17,13 +17,13 @@
 	<body>
 		<div style="position: relative;"><center><b>Use Scroll to Zoom In/Out | Click+drag to move in 3D</b></center></div>
 		<div style="position: relative;"><center>
-		<a class="github-button" href="https://github.com/techcentaur/Starling-Simulation" data-icon="octicon-star" aria-label="Star techcentaur/Starling-Simulation on GitHub">Star</a>
+		<!--<a class="github-button" href="https://github.com/techcentaur/Starling-Simulation" data-icon="octicon-star" aria-label="Star techcentaur/Starling-Simulation on GitHub">Star</a>
 		<a class="github-button" href="https://github.com/techcentaur/Starling-Simulation/fork" data-icon="octicon-repo-forked" aria-label="Fork techcentaur/Starling-Simulation on GitHub">Fork</a>
 		<a class="github-button" href="https://github.com/techcentaur" aria-label="Follow @techcentaur on GitHub">Follow @techcentaur</a>
 		</center></div>
 		<div style="position: relative;">
 			<center><a href="https://github.com/techcentaur/Starling-Simulation">View on GitHub</a></center>
-		</div>
+		</div>-->
 		<div id="info" style="margin-top: -6%;">
 		 <span id="birds"></span>
 		 </div>
@@ -241,11 +241,12 @@
 			var hash = document.location.hash.substr( 1 );
 			if (hash) hash = parseInt(hash, 0);
 
-			var argumentHash = hash || 32;
+			var argumentHash = hash || 128;
 			var birds = argumentHash * argumentHash;
 
 			THREE.BirdGeometry = function () {
-				var triangles = birds * 3;
+				var sideCount = 8;
+				var triangles = birds * sideCount;
 				var points = triangles * 3;
 
 				THREE.BufferGeometry.call( this );
@@ -266,20 +267,31 @@
 						vertices.array[v++] = arguments[i];
 					}
 				}
-				for (var f = 0; f<birds; f++ ) {
-					vertex_append(
-						0, -0, -6,
-						0, 1, -15,
-						0, 0, 8);
-					vertex_append(
-						0, 0, -4,
-						-6, 0, 0,
-						0, 0, 4);
-					vertex_append(
-						0, 0, 4,
-						6, 0, 0,
-						0, 0, -4);
+				var radius = 20;
+				var deltaAngle = (Math.PI * 2) / sideCount;
+				for (var f = 0; f < birds; ++f) {
+					for (var s = 0; s < sideCount; ++s) {
+						vertex_append(
+							0,0,0,
+							radius*Math.cos(deltaAngle*s),0, radius*Math.sin(deltaAngle*s),
+							radius*Math.cos(deltaAngle*(s+1)),0, radius*Math.sin(deltaAngle*(s+1)));
+					}
 				}
+
+				/*for (var f = 0; f<birds; f++ ) {
+					//vertex_append(
+					//	0, -0, -6,
+					//	0, 1, -15,
+					//	0, 0, 8);
+					//vertex_append(
+					//	0, 0, -4,
+					//	-6, 0, 0,
+					//	0, 0, 4);
+					//vertex_append(
+					//	0, 0, 4,
+					//	6, 0, 0,
+					//	0, 0, -4);
+				}*/
 
 				for( var v = 0; v < triangles * 3; v++ ) {
 					var i = ~~(v / 3);
@@ -335,7 +347,7 @@
 				camera = new THREE.PerspectiveCamera( 75, window.innerWidth / window.innerHeight, 1, 3000 );
 
 				scene = new THREE.Scene();
-				scene.background = new THREE.Color( 0x87ceeb);
+				scene.background = new THREE.Color( 0xefefe0);
 				scene.fog = new THREE.Fog( 0x87ceeb, 100, 1000 );
 
 			    renderer = new THREE.WebGLRenderer({antialias:true});
@@ -461,7 +473,7 @@
 
 			function initBirds() {
 				var geometry = new THREE.BirdGeometry();
-
+				//var geometry = new THREE.CircleGeometry(1, 6);
 				// For Vertex and Fragment
 				uniform_bird = {
 					color: { value: new THREE.Color( 0xff2200 ) },
